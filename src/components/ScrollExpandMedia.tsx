@@ -5,6 +5,8 @@ import {
   ReactNode,
 } from 'react';
 import { motion } from 'framer-motion';
+import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ScrollExpandMediaProps {
   mediaType?: 'video' | 'image';
@@ -35,8 +37,11 @@ const ScrollExpandMedia = ({
   const [touchStartY, setTouchStartY] = useState<number>(0);
   const [isMobileState, setIsMobileState] = useState<boolean>(false);
   const [isInView, setIsInView] = useState<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(true);
 
   const sectionRef = useRef<HTMLDivElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     setScrollProgress(0);
@@ -44,15 +49,34 @@ const ScrollExpandMedia = ({
     setMediaFullyExpanded(false);
   }, [mediaType]);
 
-  // Intersection Observer to detect when section is in view
+  // Intersection Observer to detect when section is in view and auto-play video
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setIsInView(true);
+            // Auto-play and unmute when video comes into view
+            if (videoRef.current && mediaType === 'video') {
+              videoRef.current.play().then(() => {
+                setIsPlaying(true);
+                setIsMuted(false);
+                if (videoRef.current) {
+                  videoRef.current.muted = false;
+                }
+              }).catch(err => {
+                console.log('Auto-play prevented:', err);
+                // Keep muted if autoplay fails
+                setIsMuted(true);
+              });
+            }
           } else if (scrollProgress === 0) {
             setIsInView(false);
+            // Pause when out of view
+            if (videoRef.current && mediaType === 'video') {
+              videoRef.current.pause();
+              setIsPlaying(false);
+            }
           }
         });
       },
@@ -68,7 +92,7 @@ const ScrollExpandMedia = ({
         observer.unobserve(sectionRef.current);
       }
     };
-  }, [scrollProgress]);
+  }, [scrollProgress, mediaType]);
 
   useEffect(() => {
     const handleWheel = (e: Event) => {
@@ -184,6 +208,29 @@ const ScrollExpandMedia = ({
   const firstWord = title ? title.split(' ')[0] : '';
   const restOfTitle = title ? title.split(' ').slice(1).join(' ') : '';
 
+  const togglePlayPause = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        videoRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+  };
+
   return (
     <div
       ref={sectionRef}
@@ -253,15 +300,36 @@ const ScrollExpandMedia = ({
                   ) : (
                     <div className='relative w-full h-full pointer-events-none'>
                       <video
+                        ref={videoRef}
                         src={mediaSrc}
                         poster={posterSrc}
-                        autoPlay
-                        loop
+                        muted
                         playsInline
                         preload='auto'
+                        onEnded={handleVideoEnded}
                         className='w-full h-full object-cover rounded-xl'
                         style={{ pointerEvents: 'none' }}
                       />
+                      
+                      {/* Video Controls */}
+                      <div className='absolute bottom-4 right-4 flex gap-2 z-20 pointer-events-auto'>
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          onClick={togglePlayPause}
+                          className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                        >
+                          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          onClick={toggleMute}
+                          className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+                        >
+                          {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                        </Button>
+                      </div>
                       <div
                         className='absolute inset-0 z-10'
                         style={{ pointerEvents: 'none' }}
