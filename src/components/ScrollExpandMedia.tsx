@@ -39,9 +39,11 @@ const ScrollExpandMedia = ({
   const [isInView, setIsInView] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(true);
+  const [isHoveringMedia, setIsHoveringMedia] = useState<boolean>(false);
 
   const sectionRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setScrollProgress(0);
@@ -98,12 +100,20 @@ const ScrollExpandMedia = ({
     const handleWheel = (e: Event) => {
       const wheelEvent = e as globalThis.WheelEvent;
       
-      // Only handle wheel events if section is in view
-      if (!isInView) return;
+      // Only handle wheel events if hovering over media
+      if (!isHoveringMedia) return;
       
       if (mediaFullyExpanded && wheelEvent.deltaY < 0 && window.scrollY <= 5) {
-        setMediaFullyExpanded(false);
         e.preventDefault();
+        const scrollDelta = wheelEvent.deltaY * 0.003;
+        const newProgress = Math.min(
+          Math.max(scrollProgress + scrollDelta, 0),
+          1
+        );
+        setScrollProgress(newProgress);
+        if (newProgress < 1) {
+          setMediaFullyExpanded(false);
+        }
       } else if (!mediaFullyExpanded) {
         e.preventDefault();
         const scrollDelta = wheelEvent.deltaY * 0.0015;
@@ -124,20 +134,29 @@ const ScrollExpandMedia = ({
 
     const handleTouchStart = (e: Event) => {
       const touchEvent = e as globalThis.TouchEvent;
-      if (!isInView) return;
+      if (!isHoveringMedia) return;
       setTouchStartY(touchEvent.touches[0].clientY);
     };
 
     const handleTouchMove = (e: Event) => {
       const touchEvent = e as globalThis.TouchEvent;
-      if (!touchStartY || !isInView) return;
+      if (!touchStartY || !isHoveringMedia) return;
 
       const touchY = touchEvent.touches[0].clientY;
       const deltaY = touchStartY - touchY;
 
       if (mediaFullyExpanded && deltaY < -20 && window.scrollY <= 5) {
-        setMediaFullyExpanded(false);
         e.preventDefault();
+        const scrollFactor = 0.015;
+        const scrollDelta = deltaY * scrollFactor;
+        const newProgress = Math.min(
+          Math.max(scrollProgress + scrollDelta, 0),
+          1
+        );
+        setScrollProgress(newProgress);
+        if (newProgress < 1) {
+          setMediaFullyExpanded(false);
+        }
       } else if (!mediaFullyExpanded) {
         e.preventDefault();
         const scrollFactor = deltaY < 0 ? 0.012 : 0.008;
@@ -164,8 +183,8 @@ const ScrollExpandMedia = ({
     };
 
     const handleScroll = (): void => {
-      // Only lock scroll if section is in view and not fully expanded
-      if (isInView && !mediaFullyExpanded && scrollProgress > 0) {
+      // Only lock scroll if hovering media and not fully expanded
+      if (isHoveringMedia && !mediaFullyExpanded && scrollProgress > 0) {
         const sectionTop = sectionRef.current?.getBoundingClientRect().top || 0;
         if (sectionTop <= 0) {
           window.scrollTo(0, window.scrollY);
@@ -188,7 +207,7 @@ const ScrollExpandMedia = ({
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [scrollProgress, mediaFullyExpanded, touchStartY, isInView]);
+  }, [scrollProgress, mediaFullyExpanded, touchStartY, isHoveringMedia]);
 
   useEffect(() => {
     const checkIfMobile = (): void => {
@@ -256,7 +275,12 @@ const ScrollExpandMedia = ({
           <div className='container mx-auto flex flex-col items-center justify-start relative z-10'>
             <div className='flex flex-col items-center justify-center w-full h-[100dvh] relative'>
               <div
-                className='absolute z-0 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-none rounded-2xl overflow-hidden bg-black'
+                ref={mediaContainerRef}
+                onMouseEnter={() => setIsHoveringMedia(true)}
+                onMouseLeave={() => setIsHoveringMedia(false)}
+                onTouchStart={() => setIsHoveringMedia(true)}
+                onTouchEnd={() => setIsHoveringMedia(false)}
+                className='absolute z-0 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-none rounded-2xl overflow-hidden bg-black cursor-pointer'
                 style={{
                   width: `${Math.min(mediaWidth, window.innerWidth * 0.85)}px`,
                   height: `${Math.min(mediaHeight, window.innerHeight * 0.7)}px`,
