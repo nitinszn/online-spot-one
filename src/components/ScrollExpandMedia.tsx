@@ -201,8 +201,8 @@ const ScrollExpandMedia = ({
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
 
-  const mediaWidth = 300 + scrollProgress * (isMobileState ? 500 : 900);
-  const mediaHeight = 400 + scrollProgress * (isMobileState ? 300 : 500);
+  const mediaWidth = 300 + scrollProgress * (isMobileState ? 400 : 700);
+  const mediaHeight = 400 + scrollProgress * (isMobileState ? 250 : 350);
   const textTranslateX = scrollProgress * (isMobileState ? 180 : 150);
 
   const firstWord = title ? title.split(' ')[0] : '';
@@ -256,12 +256,11 @@ const ScrollExpandMedia = ({
           <div className='container mx-auto flex flex-col items-center justify-start relative z-10'>
             <div className='flex flex-col items-center justify-center w-full h-[100dvh] relative'>
               <div
-                className='absolute z-0 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-none rounded-2xl'
+                className='absolute z-0 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-none rounded-2xl overflow-hidden bg-black'
                 style={{
-                  width: `${mediaWidth}px`,
-                  height: `${mediaHeight}px`,
-                  maxWidth: '90vw',
-                  maxHeight: '75vh',
+                  width: `${Math.min(mediaWidth, window.innerWidth * 0.85)}px`,
+                  height: `${Math.min(mediaHeight, window.innerHeight * 0.7)}px`,
+                  aspectRatio: '16/9',
                   boxShadow: '0px 0px 50px rgba(0, 0, 0, 0.3)',
                 }}
               >
@@ -307,7 +306,7 @@ const ScrollExpandMedia = ({
                         playsInline
                         preload='auto'
                         onEnded={handleVideoEnded}
-                        className='w-full h-full object-cover rounded-xl'
+                        className='w-full h-full object-contain rounded-xl'
                         style={{ pointerEvents: 'none' }}
                       />
                       
@@ -348,7 +347,7 @@ const ScrollExpandMedia = ({
                     <img
                       src={mediaSrc}
                       alt={title || 'Media content'}
-                      className='w-full h-full object-cover rounded-xl'
+                      className='w-full h-full object-contain rounded-xl'
                     />
 
                     <motion.div
